@@ -1,22 +1,33 @@
 from gevent.wsgi import WSGIServer
-from flask import Flask, request, render_template, g
+from flask import Flask, request, render_template, session
 from PIL import Image, ImageOps
-
 import io, base64, numpy, threading, werkzeug.serving
-import ncvlib, time, uuid
+import cvlib, time, uuid
 app = Flask(__name__)
+app.secret_key = b'\xd3\xdd!\xf3k8\xf0\xd4p+J\xdc\\4\x01^S\x86[Q\xc3\x91I\x1a!BMi]\xcby\xd1'
 
-FRAMES = {'orig':None,'old':None,'new':None}
-USERS = {1:FRAMES}
+USERS = dict()
 
 def load_image_into_numpy_array(image):
     '''convert PIL image data into numpy array for manipulation by TensorFlow'''
     (im_width, im_height) = image.size
     return numpy.array(image.getdata()).reshape((im_height, im_width, 3)).astype(numpy.uint8)
 
+@app.route('/clearcache')
+def clearcache():
+    for user in USERS:
+        if time.time() - USERS[user]['lastupdate'] > (60*2):
+            USERS[user]['orig'] = None
+            USERS[user]['old'] = None
+            USERS[user]['new'] = None           
+
 @app.route("/")
 def home():
     '''main page / Web UI for webcam'''
+    session['guid'] = uuid.uuid4()
+    USERS[session['guid']] = {'orig':None,'old':None,'new':None,
+                            'detection-thresh-pct':4,'lastupdate':0,
+                            'transience-secs':10,'sec-since-change':0,}
     return render_template('main.html')
 
 @app.route("/data", methods = ['GET', 'POST'])
@@ -27,8 +38,9 @@ def data():
         #print('RF:', f, request.files[f])
         #decode base64 jpeg from client request, convert to PIL Image
         x = Image.open(io.BytesIO(base64.b64decode(fo.read())))
-
-        userid = 1
+    
+        userid = session['guid']
+        USERS[userid]['lastupdate'] = time.time()
         if USERS[userid]['orig']==None:
             print('stage1')
             USERS[userid]['orig'] = x
@@ -47,7 +59,7 @@ def data():
             i2 = USERS[userid]['new']
             i1 = load_image_into_numpy_array(i1)
             i2 = load_image_into_numpy_array(i2)
-            newimg = ncvlib.compare_images(i1,i2)
+            newimg = cvlib.compare_images(i1,i2)
         
 
         newimg = Image.fromarray(numpy.uint8(newimg)).convert('RGB')
@@ -62,7 +74,6 @@ def data():
         #add data type so the browser can simply render the base64 data as an image on a canvas
         imdata="data:image/jpeg;base64,"+data.decode('ascii')
         return imdata
-    
     return 'no webcam image provided'
 
 @app.route('/testroute')
