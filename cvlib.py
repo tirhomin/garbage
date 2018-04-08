@@ -1,19 +1,4 @@
-import time, numpy, cv2
-from PIL import Image, ImageOps
-
-def tfworker(inqueue,outqueue):
-    ''' fetch video frames from queue and send them to object detector function,
-    adding the processed result to the output frames queue, to be displayed to the user'''
-
-    while True:
-        time.sleep(1/5) #dont go crazy on the cpu
-        frame = inqueue.get()
-        output = Image.fromarray(numpy.uint8(frame)).convert('RGB')
-        outqueue.put(output)
-
-
-import numpy as np
-import cv2, imutils
+import time, numpy, cv2, imutils
 
 IMG1 = 'bin0.jpg'
 IMG2 = 'bin2.jpg'
@@ -22,8 +7,8 @@ def delta_percent(imagesize, deltavalue):
     #return delta as a percentage of total image area
     return deltavalue / (imagesize[0]*imagesize[1]) * 100
 
-def load_image(img):
-    '''load image from file into opencv, scaling down large images'''
+def scale_image(img):
+    '''scaling down large images'''
     height, width = img.shape[:2]
     max_height = 640
     max_width = 640
@@ -70,8 +55,8 @@ def compare_images(img1, img2):
     return contourimage #also try return imgdelta or return thresh
 
 def main():
-    img1 = load_image(IMG1)
-    img2 = load_image(IMG2)
+    img1 = scale_image(IMG1)
+    img2 = scale_image(IMG2)
     imgdelta = compare_images(img1,img2)
 
     cv2.imshow('img1',img1); cv2.moveWindow('img1',0,50)

@@ -1,38 +1,18 @@
 from gevent.wsgi import WSGIServer
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, g
 from PIL import Image, ImageOps
 
-from queue import LifoQueue, Queue
 import io, base64, numpy, threading, werkzeug.serving
-import cvlib, time
+import ncvlib, time, uuid
 app = Flask(__name__)
+
+FRAMES = {'orig':None,'old':None,'new':None}
+USERS = {1:FRAMES}
 
 def load_image_into_numpy_array(image):
     '''convert PIL image data into numpy array for manipulation by TensorFlow'''
     (im_width, im_height) = image.size
     return numpy.array(image.getdata()).reshape((im_height, im_width, 3)).astype(numpy.uint8)
-
-def imagehandler(inqueue,outqueue):
-    ''' analyze new frame for garbage '''
-    while True:
-        image_np = inqueue.get()
-        output = Image.fromarray(numpy.uint8(image_np)).convert('RGB')
-        outqueue.put(output)
-
-#only store up to 3 frames so as not to get overwhelmed, dropped frames are fine
-inqueue = Queue(maxsize=3) #queue for frames being sent to the neural net
-outqueue = Queue(maxsize=3) #final labelled images to show user
-
-tthread = threading.Thread(target=cvlib.tfworker,args=(inqueue,inqueue))
-tthread.daemon = True
-tthread.start()
-
-#updatethread is fetching images from input queue, feeding them to tensorflow thread
-#and then adding the results to an output queue for return to the client
-updatethread = threading.Thread(target=imagehandler,args=(inqueue,outqueue))
-updatethread.daemon = True
-updatethread.start()  
-
 
 @app.route("/")
 def home():
@@ -48,17 +28,31 @@ def data():
         #decode base64 jpeg from client request, convert to PIL Image
         x = Image.open(io.BytesIO(base64.b64decode(fo.read())))
 
-        #convert image to numpy array and insert into tensorflow queue
-        arr = load_image_into_numpy_array(x)
-        inqueue.put(arr)
+        userid = 1
+        if USERS[userid]['orig']==None:
+            print('stage1')
+            USERS[userid]['orig'] = x
+        elif USERS[userid]['new']:
+            print('stage2')
+            USERS[userid]['old'] = USERS[userid]['new']
+            USERS[userid]['new'] = x
+        else:
+            print('stage3')
+            USERS[userid]['new'] = x
+        newimg = x
 
-        #get the next available processed frame from the output queue
-        #note this may not be the image we inserted into the tensorflow queue
-        #that image may still be awaiting processing, this image is instead simply
-        #the next available one, which may have been processed some milliseconds ago
-        quedata = outqueue.get()
+        if USERS[userid]['new']:
+            print('found new')
+            i1 = USERS[userid]['old']
+            i2 = USERS[userid]['new']
+            i1 = load_image_into_numpy_array(i1)
+            i2 = load_image_into_numpy_array(i2)
+            newimg = ncvlib.compare_images(i1,i2)
+        
+
+        newimg = Image.fromarray(numpy.uint8(newimg)).convert('RGB')
         out = io.BytesIO()
-        quedata.save(out,format='jpeg')
+        newimg.save(out,format='jpeg')
         
         #convert to base64 to respond to client 
         data=out.getvalue()
