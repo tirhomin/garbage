@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+    <title>GARBAGESCAN</title>
+    <link href="https://fonts.googleapis.com/css?family=Proza+Libre" rel="stylesheet"> 
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.9/css/all.css" integrity="sha384-5SOiIsAziJl6AWe0HWRKTXlfcSHKmYV4RBF18PPJ173Kzn7jzMyFuTtk8JA7QQG1" crossorigin="anonymous">
+  <meta charset='utf-8'>
+<!-- ################# CSS STYLES ################## -->
+      <style type="text/css">
+        .logo{color:white; font-size:2rem; display:inline-block;
+            font-family:"Proza Libre";
+            position:absolute; top:1.25rem; left:0; z-index:2;
+            display:block;}
+
+        html{margin:0;}
+        body{background-color:#ddd; background-image:url('/static/w1.png');}
+          #video{border: 1px solid black; box-shadow: 2px 2px 3px black; width:576px; height:432px;}
+          #photo{border: 1px solid black; box-shadow: 2px 2px 3px black; width:576px; height:432px;}
+          #canvas{display:none;}
+          .camera{width: 580px; display:inline-block;}
+          .output{width: 580px; display:inline-block;}
+          h1,h2,h3{font-weight:300; }
+          .contentarea{font-size: 16px; font-family: "Lucida Grande", "Arial", sans-serif; width: 1280px;
+                      margin:0 auto;
+                      margin-top:6em;
+                      border:1px solid #ccc;
+                      box-shadow:2px 2px 1px #aaa;
+                      text-align:center;
+                      padding:1ex 1ex 3em 1ex;
+                      background-color:#fff;    
+        }
+        .toolbar{position:absolute; top:0; left:0; width:100%; 
+            height:5rem; background-color:black;
+                background-image:url('/static/mochaGrunge.png');
+                text-align:center;}
+        .toolbar a{
+           /* padding: 1ex 2ex 1ex 2ex;*/
+            font-size:2rem;
+            margin-top:0.25rem;
+            width:4.5rem;
+            line-height:4.5rem;
+            display:inline-block;
+            border-radius:50%;
+            background-color:#fff; color:#444; font-weight:bold;
+            z-index:100;}
+        .toolbar a:hover{cursor: pointer;}
+        .buttons{display:inline-block;}
+      </style>
+<script src="static/FileSaver.js"></script>
+<script src="static/jszip.min.js"></script>
+<script src="static/main.js"></script>
+</head>
+
+<!-- ################# the web page itself / HTML ################## -->
+<body>
+    <span class="logo">
+        &nbsp;TRASH-SCANNER
+    </span>
+    
+    <div class="toolbar">   
+        <div class="buttons">
+            <a id="START"><i class="fas fa-play"></i></a>
+            &nbsp;
+            <a id="STOP"><i class="fas fa-stop"></i></a>
+            <a id="DOWNLOAD" style="display:none;"><i class="fas fa-file-archive"></i></a>
+        </div>
+    </div>
+    <div style="clear:both;"></div>
+
+
+    <div class="contentarea">
+      <div class="camera">
+        <video id="video">Video stream not available.</video>
+      </div>
+      <canvas id="canvas">
+      </canvas>
+      <div class="output">
+        <img id="photo" alt="The screen capture will appear in this box."> 
+      </div>
+      <br><br>
+
+    </div>
+</body>
+</html>
