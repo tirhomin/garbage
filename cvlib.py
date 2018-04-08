@@ -21,7 +21,7 @@ def scale_image(img):
 
     return img
 
-def compare_images(img1, img2):
+def compare_images(img1, img2, lastchange):
     '''compare old frame and current frame for changes'''
 
     #desaturate & blur to ignore camera noise etc
@@ -42,17 +42,27 @@ def compare_images(img1, img2):
 
     #set to rgb so we can use a colored bounding box
     f2 = cv2.cvtColor(f2,cv2.COLOR_GRAY2BGR)
+    print('------')
+    tempimg = img2.copy()
+    totaldelta = 0
 
     for c in cnts:
         #find contiguous chanaged areas (contours)        
         dp = delta_percent(f1.shape,cv2.contourArea(c))
-        if dp<0.1:continue #ignore small contours
+        if dp<0.1:
+            #ignore tiny differences, probably noise
+            continue
+        else:
+            totaldelta+=dp
+        print('deltapercent',dp)
 
         #highlight detected trash
         (x, y, w, h) = cv2.boundingRect(c)
-        cv2.rectangle(img2, (x, y), (x + w, y + h), (0,0,224), 2)
+        cv2.rectangle(tempimg, (x, y), (x + w, y + h), (0,0,224), 2)
 
-    return contourimage #also try return imgdelta or return thresh
+    #cv2.putText(contourimage,"not detected", (0,0), cv2.CV_FONT_HERSHEY_SIMPLEX, 2, 255)
+    return tempimg, contourimage, totaldelta#also try return imgdelta or return thresh
+    
 
 def main():
     img1 = scale_image(IMG1)

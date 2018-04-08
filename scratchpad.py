@@ -11,6 +11,7 @@ notes:
 
     plans:
         make thresholds user-selectable in the UI as well as making the transience-time selectable
+        show the "totaldelta" and not just the frame transience delta
 '''
 import numpy as np
 import cv2, imutils

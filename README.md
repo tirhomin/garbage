@@ -7,7 +7,7 @@ Installation process:
 
 To run:
 
-`python3 trash.py`
+`python3 scratchpad.py`
 
 ![Alt text](/demo2.jpg?raw=true "Progress")
 ![Alt text](/demo1.jpg?raw=true "Progress")

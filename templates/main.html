@@ -20,6 +20,8 @@
           .camera{width: 580px; display:inline-block;}
           .output{width: 580px; display:inline-block;}
           h1,h2,h3{font-weight:300; }
+          #setorig{text-decoration:none; font-weight:bold; color:white; background-color:#37c; display:inline-block; padding:1ex;}
+          #setorig:hover{cursor: pointer;}
           .contentarea{font-size: 16px; font-family: "Lucida Grande", "Arial", sans-serif; width: 1280px;
                       margin:0 auto;
                       margin-top:6em;
@@ -69,6 +71,13 @@
 
 
     <div class="contentarea">
+        <div id="inputbar">
+            <a id="setorig">set as empty</a>
+            <form action='/settings' method="POST">
+                detection threshold: <input name="detection-thresh-pct" value=5 style="width:4ex;"> percent<br>
+                ignore transient delta: <input name="transience-secs" value=10 style="width:4ex;"> seconds
+            </form>
+        </div>
       <div class="camera">
         <video id="video">Video stream not available.</video>
       </div>
