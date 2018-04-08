@@ -58,6 +58,7 @@ def compare_images(img1, img2):
     print('------')
     tempimg = img2.copy()
     totaldelta = 0
+
     for c in cnts:
         #find contiguous chanaged areas (contours)        
         dp = delta_percent(f1.shape,cv2.contourArea(c))
@@ -91,6 +92,8 @@ def main():
     id3,delta3,td3 = compare_images(img1,img4)
     id4,delta4,td4 = compare_images(img1,img5)
 
+
+    #show relative differences between current frame and original frame of empty bin
     print("%.1f, %.1f, %.1f, %.1f" %(td1,td2,td3,td4))
     '''
         cv2.imshow('img1',id1); cv2.moveWindow('img1',0,50)

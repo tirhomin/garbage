@@ -25,9 +25,18 @@ def clearcache():
 def home():
     '''main page / Web UI for webcam'''
     session['guid'] = uuid.uuid4()
+
+    #where lastupdate is the last time the frame was updated,
+    #lastchange is the last time the frame delta changed
+    #totaldelta is the current total delta
+    #transience secs is the amount of time to allow transient objects, i.e. people, into the frame
+    
+    #so in simple terms, the algorithm should detect trash if the following is true:
+    "if totaldelta > detection-thresh-pct and lastchange > transience-secs"
+
     USERS[session['guid']] = {'orig':None,'old':None,'new':None,
                             'detection-thresh-pct':4,'lastupdate':0,
-                            'transience-secs':10,'sec-since-change':0,}
+                            'transience-secs':10,'lastchange':0,'totaldelta':0}
     return render_template('main.html')
 
 @app.route("/data", methods = ['GET', 'POST'])
@@ -41,6 +50,8 @@ def data():
     
         userid = session['guid']
         USERS[userid]['lastupdate'] = time.time()
+
+        #
         if USERS[userid]['orig']==None:
             print('stage1')
             USERS[userid]['orig'] = x
