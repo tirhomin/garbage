@@ -15,93 +15,85 @@ def load_image_into_numpy_array(image):
 
 @app.route('/emptybin')
 def emptybin():
-    print('emptying bin')
-    
-    pass
+    '''set current frame as "empty bin" frame'''
+    userid = session['guid']
+    USERS[userid]['emptybinframe'] = USERS[userid]['curframe']
+    return 'emptied'
 
 @app.route('/settings', methods=['POST'])
 def settings():
-    print('updating settings')
-    print(request.form['threshpct'])
-    print(request.form['transiencetime'])
-    return 'OK'
+    '''update user settings (provided by HTTP POST from button on web UI)'''
+    userid = session['guid']
+    USERS[userid]['threshpct'] = float(request.form['threshpct'])
+    USERS[userid]['transiencetime'] = float(request.form['transiencetime'])
+    return 'settings changed'
 
 @app.route('/clearcache')
 def clearcache():
+    '''delete old frames for user privacy after 2 minutes of no updates from user camera'''
     for user in USERS:
         if time.time() - USERS[user]['lastupdate'] > (60*2):
             USERS[user]['emptybinframe'] = None
-            USERS[user]['prevframe'] = None
             USERS[user]['curframe'] = None           
 
 def session_setup():
+    '''set up user session (server-side frame storage since they wont fit in 4kb client-side session)'''
     if not 'guid' in session or not session['guid'] in USERS:
         #ensure user has an ID and that server has a copy of this ID
         session['guid'] = uuid.uuid4()
-        USERS[session['guid']] = {'emptybinframe':None,'prevframe':None,'curframe':None,
+        USERS[session['guid']] = {'emptybinframe':None,
+            'curframe':None,
             'threshpct':2,'lastupdate':0,
-            'transiencetime':5,'lastchange':0,'lastdelta':0}
-
+            'transiencetime':5,'lastdelta':0,
+            'lastempty':time.time()}
 
 @app.route("/")
 def home():
     '''main page / Web UI for webcam'''
-    session.clear() #debug
+    session.clear() #clear session when user refreshes page
     session_setup()
-    #where lastupdate is the last time the frame was updated,
-    #lastchange is the last time the frame delta changed
-    #totaldelta is the current total delta
-    #transience secs is the amount of time to allow transient objects, i.e. people, into the frame
-    
-    #so in simple terms, the algorithm should detect trash if the following is true:
-    "if totaldelta > detection-thresh-pct and lastchange > transience-secs"
-
     return render_template('main.html')
 
 @app.route("/data", methods = ['GET', 'POST'])
 def data():
-    '''accept AJAX request containing webcam image, respond with processed image'''
-    #process that image
+    '''accept image from user webcam for processing,
+    user will send frame to this function from an AJAX call'''
     session_setup()
-    if True:#try:
+    userid = session['guid']
+    
+    try:
         for f,fo in request.files.items():
-            #print('RF:', f, request.files[f])
             #decode base64 jpeg from client request, convert to PIL Image
-            x = Image.open(io.BytesIO(base64.b64decode(fo.read())))
-        
-            userid = session['guid']
-            #print(USERS)
+            cameraframe = Image.open(io.BytesIO(base64.b64decode(fo.read())))       
             USERS[userid]['lastupdate'] = time.time()
+            USERS[userid]['curframe'] = cameraframe
 
             if USERS[userid]['emptybinframe']==None:
-                USERS[userid]['emptybinframe'] = x
-            elif USERS[userid]['curframe']:
-                USERS[userid]['prevframe'] = USERS[userid]['curframe']
-                USERS[userid]['curframe'] = x
-            else:
-                USERS[userid]['curframe'] = x
-            newimg = x
+                USERS[userid]['emptybinframe'] = cameraframe
 
+            #prepare images for processing
+            i1 = load_image_into_numpy_array(USERS[userid]['emptybinframe'])
+            i2 = load_image_into_numpy_array(USERS[userid]['curframe'])
 
             lastdelta = USERS[userid]['lastdelta']
-            if USERS[userid]['curframe']:
-                i1 = USERS[userid]['emptybinframe']#USERS[userid]['prevframe']
-                i2 = USERS[userid]['curframe']
-                i1 = load_image_into_numpy_array(i1)
-                i2 = load_image_into_numpy_array(i2)
+            threshpct = USERS[userid]['threshpct']
+            transiencetime = USERS[userid]['transiencetime']
+            lastempty = USERS[userid]['lastempty']         
 
-                lastchange = USERS[userid]['lastchange']
-                threshpct = USERS[userid]['threshpct']
-                transiencetime = USERS[userid]['transiencetime']
-                lastdelta = USERS[userid]['lastdelta']                
-                timg, newimg, lastdelta = cvlib.compare_images(i1,i2,lastchange,lastdelta,threshpct,transiencetime)
-            
-            #if over thresh start a counter, when thresh has exceeded for n seconds then flag full
-            if lastdelta > USERS[userid]['lastdelta']:
-                USERS[userid]['lastchange'] = time.time()
-                USERS[userid]['lastdelta'] = lastdelta
+            if (time.time()-lastempty) > transiencetime:
+                #bin has been full for longer than threshold time
+                #indicating the fullness is not a transient object
+                timesup = True
+            else:
+                timesup = False
+            timg, newimg, lastdelta = cvlib.compare_images(i1,i2,threshpct,timesup)
+            if lastdelta < threshpct:
+                #bin is not full yet, but may have been full in a previous frame
+                #due to a transient object -- reset the counter so we know
+                #when the bin has been full for longer than the threshold time, 
+                #accounting for transient objects by discarding them by resetting the timer
+                USERS[userid]['lastempty'] = time.time()
 
-            #print('---->',type(newimg))
             newimg = Image.fromarray(numpy.uint8(timg)).convert('RGB')
             out = io.BytesIO()
             newimg.save(out,format='jpeg')
@@ -114,16 +106,11 @@ def data():
             #add data type so the browser can simply render the base64 data as an image on a canvas
             imdata="data:image/jpeg;base64,"+data.decode('ascii')
             return imdata
-    if False:#except Exception as e:
+    except Exception as e:
         print('error',e)
         return 'error occurred'
     return 'no webcam image provided'
 
-@app.route('/testroute')
-def testroute():
-    return 'test route returned OK'
-#debug server which auto-reloads for live changes during development
-#app.run(debug=True, port=8080, host='0.0.0.0')
 @werkzeug.serving.run_with_reloader
 def serve():
     server = WSGIServer(("0.0.0.0", 8080), app)

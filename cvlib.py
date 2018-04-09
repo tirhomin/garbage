@@ -4,7 +4,7 @@ IMG1 = 'bin0.jpg'
 IMG2 = 'bin2.jpg'
 
 def delta_percent(imagesize, deltavalue):
-    #return delta as a percentage of total image area
+    '''return delta as a percentage of total image area'''
     return deltavalue / (imagesize[0]*imagesize[1]) * 100
 
 def scale_image(img):
@@ -21,7 +21,7 @@ def scale_image(img):
 
     return img
 
-def compare_images(img1, img2, lastchange, lastdelta, threshpct=5, transiencetime=10):
+def compare_images(img1, img2, threshpct=5, timesup=False):
     '''compare old frame and current frame for changes'''
 
     #desaturate & blur to ignore camera noise etc
@@ -42,6 +42,7 @@ def compare_images(img1, img2, lastchange, lastdelta, threshpct=5, transiencetim
 
     #set to rgb so we can use a colored bounding box
     contourimage = cv2.cvtColor(contourimage,cv2.COLOR_GRAY2RGB)
+    #image with boxes shown
     boximg = contourimage.copy()
     totaldelta = 0
 
@@ -58,14 +59,11 @@ def compare_images(img1, img2, lastchange, lastdelta, threshpct=5, transiencetim
         (x, y, w, h) = cv2.boundingRect(c)
         cv2.rectangle(boximg, (x, y), (x + w, y + h), (0,0,224), 2)
 
-    print('lastdelta, totaldelta',lastdelta, totaldelta)
-    if lastchange>transiencetime:
-        print('time up')
-    print('absdelta', (abs(lastdelta-totaldelta)))
-    if lastchange>transiencetime and totaldelta>threshpct:
+    #write bin status on top of frame
+    if totaldelta>threshpct and timesup:
         cv2.putText(boximg,"bin full", (5,25), cv2.FONT_HERSHEY_SIMPLEX, 1, color=(255,0,0))
     else:
         cv2.putText(boximg,"bin not full", (5,25), cv2.FONT_HERSHEY_SIMPLEX, 1, color=(0,255,0))
-    print('totaldelta:',totaldelta)
+
     return boximg, contourimage, totaldelta#also try return imgdelta or return thresh
     
