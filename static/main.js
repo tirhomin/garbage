@@ -69,8 +69,26 @@
     zip_and_download();
   }
 
+  function setbinempty(){
+    // everything will be handled server-side
+    $.get( "/emptybin", function( data ) {});
+  }
+
+  function sendform(event){
+    //send new settings to server
+      event.preventDefault();
+      $.ajax({
+          type: 'POST',
+          url: $("#settingsform").attr("action"),
+          data: $("#settingsform").serialize(), 
+          success: function(response) { },
+        });
+  }
+
   function startup() {
-      console.log('inside startup function');
+    document.getElementById('setbinempty').addEventListener('click', setbinempty, false);    
+    document.getElementById('settings').addEventListener('click', sendform, false);    
+
     document.getElementById('START').addEventListener('click', starthandler, false);    
     document.getElementById('STOP').addEventListener('click', stophandler, false);
     document.getElementById('DOWNLOAD').addEventListener('click', downloadhandler, false);
@@ -112,7 +130,7 @@
       }
     }, false);
 
-    window.setInterval(function(){takepicture();},250)
+    window.setInterval(function(){takepicture();},2000)
     //note, code is currently synchronous, 100ms will
     //probably only be hit by east coast US users, otherwise
     //network latency means they wont have heard back on last request in

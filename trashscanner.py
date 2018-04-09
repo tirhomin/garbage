@@ -13,25 +13,41 @@ def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
     return numpy.array(image.getdata()).reshape((im_height, im_width, 3)).astype(numpy.uint8)
 
+@app.route('/emptybin')
+def emptybin():
+    print('emptying bin')
+    
+    pass
+
+@app.route('/settings', methods=['POST'])
+def settings():
+    print('updating settings')
+    print(request.form['threshpct'])
+    print(request.form['transiencetime'])
+    return 'OK'
+
 @app.route('/clearcache')
 def clearcache():
     for user in USERS:
         if time.time() - USERS[user]['lastupdate'] > (60*2):
-            USERS[user]['orig'] = None
-            USERS[user]['old'] = None
-            USERS[user]['new'] = None           
+            USERS[user]['emptybinframe'] = None
+            USERS[user]['prevframe'] = None
+            USERS[user]['curframe'] = None           
+
+def session_setup():
+    if not 'guid' in session or not session['guid'] in USERS:
+        #ensure user has an ID and that server has a copy of this ID
+        session['guid'] = uuid.uuid4()
+        USERS[session['guid']] = {'emptybinframe':None,'prevframe':None,'curframe':None,
+            'threshpct':2,'lastupdate':0,
+            'transiencetime':5,'lastchange':0,'lastdelta':0}
+
 
 @app.route("/")
 def home():
     '''main page / Web UI for webcam'''
-    #TODO FIX
-    session.clear()
-    if not 'guid' in session:
-        session['guid'] = uuid.uuid4()
-        USERS[session['guid']] = {'orig':None,'old':None,'new':None,
-            'detection-thresh-pct':4,'lastupdate':0,
-            'transience-secs':10,'lastchange':0,'olddelta':0, 'newdelta':0}
-
+    session.clear() #debug
+    session_setup()
     #where lastupdate is the last time the frame was updated,
     #lastchange is the last time the frame delta changed
     #totaldelta is the current total delta
@@ -46,6 +62,7 @@ def home():
 def data():
     '''accept AJAX request containing webcam image, respond with processed image'''
     #process that image
+    session_setup()
     if True:#try:
         for f,fo in request.files.items():
             #print('RF:', f, request.files[f])
@@ -53,38 +70,39 @@ def data():
             x = Image.open(io.BytesIO(base64.b64decode(fo.read())))
         
             userid = session['guid']
-            print(USERS)
+            #print(USERS)
             USERS[userid]['lastupdate'] = time.time()
 
-            #
-            if USERS[userid]['orig']==None:
-                print('stage1')
-                USERS[userid]['orig'] = x
-            elif USERS[userid]['new']:
-                print('stage2')
-                USERS[userid]['old'] = USERS[userid]['new']
-                USERS[userid]['new'] = x
+            if USERS[userid]['emptybinframe']==None:
+                USERS[userid]['emptybinframe'] = x
+            elif USERS[userid]['curframe']:
+                USERS[userid]['prevframe'] = USERS[userid]['curframe']
+                USERS[userid]['curframe'] = x
             else:
-                print('stage3')
-                USERS[userid]['new'] = x
+                USERS[userid]['curframe'] = x
             newimg = x
 
-            if USERS[userid]['new']:
-                print('found new')
-                i1 = USERS[userid]['old']
-                i2 = USERS[userid]['new']
+
+            lastdelta = USERS[userid]['lastdelta']
+            if USERS[userid]['curframe']:
+                i1 = USERS[userid]['emptybinframe']#USERS[userid]['prevframe']
+                i2 = USERS[userid]['curframe']
                 i1 = load_image_into_numpy_array(i1)
                 i2 = load_image_into_numpy_array(i2)
-                #TODO new algorithm compare to orig image every time
-                timg, newimg, newdelta = cvlib.compare_images(i1,i2,USERS[userid]['lastchange'])
-            
-            if newdelta > USERS[userid]['newdelta']:
-                USERS[userid]['lastchange'] = time.time()
-                USERS[userid]['olddelta'] = USERS[userid]['newdelta']
-                USERS[userid]['newdelta'] = newdelta
 
-            print('---->',type(newimg))
-            newimg = Image.fromarray(numpy.uint8(newimg)).convert('RGB')
+                lastchange = USERS[userid]['lastchange']
+                threshpct = USERS[userid]['threshpct']
+                transiencetime = USERS[userid]['transiencetime']
+                lastdelta = USERS[userid]['lastdelta']                
+                timg, newimg, lastdelta = cvlib.compare_images(i1,i2,lastchange,lastdelta,threshpct,transiencetime)
+            
+            #if over thresh start a counter, when thresh has exceeded for n seconds then flag full
+            if lastdelta > USERS[userid]['lastdelta']:
+                USERS[userid]['lastchange'] = time.time()
+                USERS[userid]['lastdelta'] = lastdelta
+
+            #print('---->',type(newimg))
+            newimg = Image.fromarray(numpy.uint8(timg)).convert('RGB')
             out = io.BytesIO()
             newimg.save(out,format='jpeg')
             
