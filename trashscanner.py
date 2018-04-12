@@ -90,12 +90,16 @@ def data():
             transiencetime = USERS[userid]['transiencetime']
             lastempty = USERS[userid]['lastempty']         
 
+            #check if frame has not changed for some time 
+            #(i.e. there is no one walking about in the frame)
             if (time.time()-lastempty) > transiencetime:
                 #bin has been full for longer than threshold time
                 #indicating the fullness is not a transient object
                 timesup = True
             else:
                 timesup = False
+            
+            #check whether bin is full (output image will be automatically labelled, see cvlib)
             timg, newimg, lastdelta = cvlib.compare_images(i1,i2,threshpct,timesup)
             if lastdelta < threshpct:
                 #bin is not full yet, but may have been full in a previous frame
