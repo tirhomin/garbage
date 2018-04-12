@@ -1,10 +1,18 @@
-from gevent.wsgi import WSGIServer
-from flask import Flask, request, render_template, session
+from gevent import monkey
+monkey.patch_all()
+from gevent.pywsgi import WSGIServer
+from flask import Flask, request, render_template, session, redirect, send_from_directory
 from PIL import Image, ImageOps
-import io, base64, numpy, threading, werkzeug.serving
-import cvlib, time, uuid
-app = Flask(__name__)
+import sys, io, base64, numpy, time, uuid, werkzeug.serving
+import cvlib
+app = Flask(__name__, static_url_path='')
 app.secret_key = b'\xd3\xdd!\xf3k8\xf0\xd4p+J\xdc\\4\x01^S\x86[Q\xc3\x91I\x1a!BMi]\xcby\xd1'
+
+#use SSL certificate or not
+if 'ssl' in sys.argv: SSL = True
+else: SSL = False
+if 'production' in sys.argv: PRODUCTION = True
+else: PRODUCTION = False
 
 USERS = dict()
 
@@ -24,7 +32,7 @@ def emptybin():
 def settings():
     '''update user settings (provided by HTTP POST from button on web UI)'''
     userid = session['guid']
-    USERS[userid]['threshpct'] = float(request.form['threshpct'])
+    USERS[userid]['threshpct'] = float(request.form['threshpct'].strip('%%'))
     USERS[userid]['transiencetime'] = float(request.form['transiencetime'])
     return 'settings changed'
 
@@ -50,6 +58,8 @@ def session_setup():
 @app.route("/")
 def home():
     '''main page / Web UI for webcam'''
+    #if running on live server, send everyone to SSL
+    if PRODUCTION and not SSL:return redirect('https://garbage.tirhomin.com')
     session.clear() #clear session when user refreshes page
     session_setup()
     return render_template('main.html')
@@ -111,7 +121,21 @@ def data():
         return 'error occurred'
     return 'no webcam image provided'
 
+@app.route('/static/<path:path>')
+@app.route('/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
+
 @werkzeug.serving.run_with_reloader
 def serve():
-    server = WSGIServer(("0.0.0.0", 8080), app)
-    server.serve_forever()
+    if SSL:
+        #/etc/letsencrypt/live/garbage.tirhomin.com/fullchain.pem'
+        print('running with SSL')
+        srv = WSGIServer(('0.0.0.0', 8081), app,
+                            certfile='fullchain.pem',
+                            keyfile='privkey.pem')
+        srv.serve_forever()
+    else:
+        print('running without SSL')
+        srv = WSGIServer(('0.0.0.0', 8080), app)
+        srv.serve_forever()

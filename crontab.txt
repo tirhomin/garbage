@@ -1,0 +1,12 @@
+SHELL=/bin/bash
+@reboot cd /home/garbage/web; /home/garbage/web/venv/bin/python3 /home/garbage/web/trashscanner.py
+@reboot cd /home/garbage/web; /home/garbage/web/venv/bin/python3 /home/garbage/web/trashscanner.py ssl
+
+
+
+
+
+
+
+
+
