@@ -34,7 +34,8 @@ def compare_images(img1, img2, threshpct=5, timesup=False):
     imgdelta = cv2.absdiff(f1, f2)
 
     #discard minor differences in lighting, e.g. a faint shadow, camera noise, etc
-    thresh = cv2.threshold(imgdelta, 25, 192, cv2.THRESH_BINARY)[1]
+    #i.e. difference must be at least 25/255 or ~10%
+    thresh = cv2.threshold(imgdelta, 25, 255, cv2.THRESH_BINARY)[1]
     thresh = cv2.dilate(thresh, None, iterations=2)
 
     #find contours, perhaps useful for finding contiguous areas of change
