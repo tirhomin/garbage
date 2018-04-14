@@ -10,8 +10,8 @@ def delta_percent(imagesize, deltavalue):
 def scale_image(img):
     '''scaling down large images'''
     height, width = img.shape[:2]
-    max_height = 640
-    max_width = 640
+    max_height = 400
+    max_width = 400
 
     #scale large images down
     if max_height < height or max_width < width:
@@ -21,7 +21,7 @@ def scale_image(img):
 
     return img
 
-def compare_images(img1, img2, threshpct=5, timesup=False):
+def compare_images(img1, img2, threshpct=5, timesup=False, floorthresh=20):
     '''compare old frame and current frame for changes'''
 
     #desaturate & blur to ignore camera noise etc
@@ -35,7 +35,7 @@ def compare_images(img1, img2, threshpct=5, timesup=False):
 
     #discard minor differences in lighting, e.g. a faint shadow, camera noise, etc
     #i.e. difference must be at least 25/255 or ~10%
-    thresh = cv2.threshold(imgdelta, 25, 255, cv2.THRESH_BINARY)[1]
+    thresh = cv2.threshold(imgdelta, floorthresh, 255, cv2.THRESH_BINARY)[1]
     thresh = cv2.dilate(thresh, None, iterations=2)
 
     #find contours, perhaps useful for finding contiguous areas of change
@@ -68,3 +68,14 @@ def compare_images(img1, img2, threshpct=5, timesup=False):
 
     return boximg, contourimage, totaldelta#also try return imgdelta or return thresh
     
+if __name__=='__main__':
+    import sys
+    if 'test' in sys.argv:
+        for i in range(50):
+            t=time.time()
+            with open('img/bin1.jpg','rb') as f:
+                img1 = cv2.imdecode(numpy.asarray(bytearray(f.read()), dtype="uint8"), cv2.IMREAD_COLOR)
+            with open('img/bin2.jpg','rb') as f:
+                img2 = cv2.imdecode(numpy.asarray(bytearray(f.read()), dtype="uint8"), cv2.IMREAD_COLOR)
+            compare_images(scale_image(img1),scale_image(img2))
+            print('TIME:',time.time()-t)

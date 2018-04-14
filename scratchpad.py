@@ -14,7 +14,7 @@ notes:
         show the "totaldelta" and not just the frame transience delta
 '''
 import numpy as np
-import cv2, imutils
+import cv2, imutils, io
 
 def delta_percent(imagesize, deltavalue):
     #return delta as a percentage of total image area
@@ -22,7 +22,14 @@ def delta_percent(imagesize, deltavalue):
 
 def load_image(filename):
     '''load image from file into opencv, scaling down large images'''
-    img = cv2.imread(filename,1)
+    #img = cv2.imread(filename,1)#1.559, 0.0050
+
+    with open(filename,'rb') as f:
+        fr = f.read()
+    '''
+    image = np.asarray(bytearray(fr), dtype="uint8")
+    img = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    '''
     height, width = img.shape[:2]
     max_height = 480
     max_width = 480
@@ -77,6 +84,7 @@ def compare_images(img1, img2):
     return tempimg, contourimage, totaldelta#also try return imgdelta or return thresh
 
 def main():
+    import time
     IMG1 = 'img/bin0.jpg'
     IMG2 = 'img/bin1.jpg'
     IMG3 = 'img/bin11.jpg'
@@ -88,14 +96,18 @@ def main():
     img3 = load_image(IMG3)
     img4 = load_image(IMG4)
     img5 = load_image(IMG5)
+
+    d1=time.time()
     id1,delta1,td1 = compare_images(img1,img2)
-    id2,delta2,td2 = compare_images(img1,img3)
-    id3,delta3,td3 = compare_images(img1,img4)
-    id4,delta4,td4 = compare_images(img1,img5)
+    d2=time.time()-d1
+    print('D2',d2)
+    #id2,delta2,td2 = compare_images(img1,img3)
+    #id3,delta3,td3 = compare_images(img1,img4)
+    #id4,delta4,td4 = compare_images(img1,img5)
 
 
     #show relative differences between current frame and original frame of empty bin
-    print("%.1f, %.1f, %.1f, %.1f" %(td1,td2,td3,td4))
+    #print("%.1f, %.1f, %.1f, %.1f" %(td1,td2,td3,td4))
     '''
         cv2.imshow('img1',id1); cv2.moveWindow('img1',0,50)
         cv2.imshow('img2',id2); cv2.moveWindow('img2',480,50)

@@ -1,52 +1,63 @@
 <!doctype html>
 <html>
 <head>
-    <title>Trash Scanner</title>
+    <title>BIN.SCAN</title>
     <link href="https://fonts.googleapis.com/css?family=Proza+Libre" rel="stylesheet"> 
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.9/css/all.css" integrity="sha384-5SOiIsAziJl6AWe0HWRKTXlfcSHKmYV4RBF18PPJ173Kzn7jzMyFuTtk8JA7QQG1" crossorigin="anonymous">
   <meta charset='utf-8'>
 <!-- ################# CSS STYLES ################## -->
       <style type="text/css">
         .logo{color:white; font-size:2rem; display:inline-block;
-            position:absolute; top:1.25rem; left:0; z-index:2;
+            position:absolute; top:1.5rem; left:0; z-index:10;
             display:block;}
 
         html{margin:0;            font-family:"Proza Libre";
 }
         body{background-color:#ddd; background-image:url('/static/w1.png');}
-          #video{border: 1px solid black; box-shadow: 2px 2px 3px black; width:576px; height:432px;}
-          #photo{border: 1px solid black; box-shadow: 2px 2px 3px black; width:576px; height:432px;}
+          #video{width:576px; height:432px; background-color:#fff;}
+          #photo{ width:576px; height:432px;  background-color:#fff;}
           #canvas{display:none;}
-          .camera{width: 580px; display:inline-block;}
-          .output{width: 580px; display:inline-block;}
+          .camera{width: 580px; display:inline-block;padding-right:2em;}
+          .output{width: 580px; display:inline-block;padding-left:2em;}
           h1,h2,h3{font-weight:300; }
           .contentarea{font-size: 16px; font-family: "Lucida Grande", "Arial", sans-serif; width: 1280px;
                       margin:0 auto;
-                      margin-top:8rem;
+                      margin-top:12rem;
                       border:1px solid #ccc;
+                      border-radius:1ex;
                       box-shadow:2px 2px 1px #aaa;
                       text-align:center;
-                      padding:1ex 1ex 3em 1ex;
-                      background-color:#fff;    
+                      padding:3em 2em 3em 2em;
+                      background-color:rgba(240,240,240,0.4);    
         }
         .toolbar{position:absolute; top:0; left:0; width:100%; 
-            height:5rem; background-color:black;
+            height:6rem; background-color:black;
                 background-image:url('/static/mochaGrunge0.png');
-                text-align:center;}
+                text-align:center;
+                z-index:5;
+                box-shadow:0px 3px 2px #333;}
+        .toolbar a:hover{background-color:#aaa;}
         .toolbar a{
            /* padding: 1ex 2ex 1ex 2ex;*/
             font-size:2rem;
-            margin-top:0.25rem;
+            margin-top:0.75rem;
             width:4.5rem;
             line-height:4.5rem;
             display:inline-block;
             border-radius:50%;
-            background-color:#fff; color:#444; font-weight:bold;
+            border-left:2px solid #fff;
+            border-top:2px solid #fff;
+            border-right:2px solid #bbb;
+            border-bottom:2px solid #bbb;
+
+            background-color:#dadada; color:#444; font-weight:bold;
             z-index:100;}
         .toolbar a:hover{cursor: pointer;}
         .buttons{display:inline-block;}
-        .toolbar2{position:absolute; top:5rem; left:0; width:100%; 
-            height:3rem; background-color:#777;
+        .toolbar2{position:absolute; top:6rem; left:0; width:100%; 
+            padding:6px 0px 4px 0px;
+            box-shadow:0px 3px 2px #777;
+            height:4rem; background-color:#777;
                 background-image:url('/static/mochaGrunge.png');
                 }
         form{float:left;padding-right:1em;}
@@ -54,9 +65,15 @@
         input{height:1em; border:1px solid white;}
         #setbinempty, #settings{ text-decoration:none; font-weight:bold; 
             color:white; background-color:#37c; display:inline-block;
-            height:2rem;
-            line-height:2rem;
-            margin-top:0.5rem;
+            border-left:1px solid rgb(109, 156, 214);
+            border-top:1px solid rgb(109, 156, 214);
+            border-right:1px solid #25a;
+            border-bottom:1px solid #25a;
+            box-shadow:1px 1px 2px #555;
+
+            height:2.5rem;
+            line-height:2.5rem;
+            margin-top:0.9rem;
             border-radius:1ex;
             padding:0 1ex 0 1ex;
         }
@@ -73,7 +90,7 @@
 <!-- ################# the web page itself / HTML ################## -->
 <body>
     <span class="logo">
-        &nbsp;TRASH-SCANNER
+        &nbsp;&nbsp;&nbsp;&nbsp;BIN.SCAN
     </span>
     
     <div class="toolbar">   
@@ -88,11 +105,15 @@
     <div class="toolbar2">
         <form id="settingsform" action='/settings' method="POST">
             <span class="formfield">
-                <input name="threshpct" value=2 style="width:4ex;" autocomplete=off> percent threshold for full bin
+                &nbsp;&nbsp;<input name="threshpct" value=2 style="width:3ex;" autocomplete=off>% of screen occupied by rubbish
             </span>
             <br>
             <span class="formfield">
-                <input name="transiencetime" value=5 style="width:4ex;" autocomplete=off> seconds to ignore transient deltas
+                &nbsp;&nbsp;<input name="transiencetime" value=5 style="width:3ex;" autocomplete=off> seconds to ignore motion
+            </span>
+            <br>
+            <span class="formfield">
+                &nbsp;&nbsp;<input name="floorthresh" value=20 style="width:3ex;" autocomplete=off>% detection floor
             </span>
         </form>
         <a id="settings">update settings</a>   
@@ -109,8 +130,6 @@
       <div class="output">
         <img id="photo" alt="The screen capture will appear in this box."> 
       </div>
-      <br><br>
-
     </div>
 </body>
 </html>

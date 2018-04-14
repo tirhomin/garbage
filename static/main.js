@@ -130,7 +130,7 @@
       }
     }, false);
 
-    window.setInterval(function(){takepicture();},333)
+    window.setInterval(function(){takepicture();},50)
     //note, code is currently synchronous, 100ms will
     //probably only be hit by east coast US users, otherwise
     //network latency means they wont have heard back on last request in

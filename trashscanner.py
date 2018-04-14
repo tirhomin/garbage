@@ -1,10 +1,11 @@
 from gevent import monkey
-monkey.patch_all()
+#monkey.patch_all()
 from gevent.pywsgi import WSGIServer
-from flask import Flask, request, render_template, session, redirect, send_from_directory
+from flask import g,Flask, request, render_template, session, redirect, send_from_directory
 from PIL import Image, ImageOps
 import sys, io, base64, numpy, time, uuid, werkzeug.serving
-import cvlib
+import cv2,cvlib
+import numpy as np
 app = Flask(__name__, static_url_path='')
 app.secret_key = b'\xd3\xdd!\xf3k8\xf0\xd4p+J\xdc\\4\x01^S\x86[Q\xc3\x91I\x1a!BMi]\xcby\xd1'
 
@@ -33,6 +34,7 @@ def settings():
     '''update user settings (provided by HTTP POST from button on web UI)'''
     userid = session['guid']
     USERS[userid]['threshpct'] = float(request.form['threshpct'].strip('%%'))
+    USERS[userid]['floorthresh'] = float(request.form['floorthresh'].strip('%%'))
     USERS[userid]['transiencetime'] = float(request.form['transiencetime'])
     return 'settings changed'
 
@@ -51,6 +53,7 @@ def session_setup():
         session['guid'] = uuid.uuid4()
         USERS[session['guid']] = {'emptybinframe':None,
             'curframe':None,
+            'floorthresh':20,
             'threshpct':2,'lastupdate':0,
             'transiencetime':5,'lastdelta':0,
             'lastempty':time.time()}
@@ -70,23 +73,27 @@ def data():
     user will send frame to this function from an AJAX call'''
     session_setup()
     userid = session['guid']
-    
-    try:
+    if 1:#try:
         for f,fo in request.files.items():
-            #decode base64 jpeg from client request, convert to PIL Image
-            cameraframe = Image.open(io.BytesIO(base64.b64decode(fo.read())))       
+            t1=time.time()
+            #decode base64 jpeg from client request
+            fr=io.BytesIO(base64.b64decode(fo.read()))
+            image = np.asarray(bytearray(fr.read()), dtype="uint8")
+            cameraframe = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
             USERS[userid]['lastupdate'] = time.time()
             USERS[userid]['curframe'] = cameraframe
 
-            if USERS[userid]['emptybinframe']==None:
-                USERS[userid]['emptybinframe'] = cameraframe
+            if type(USERS[userid]['emptybinframe'])==type(None):
+                USERS[userid]['emptybinframe'] = cameraframe#load_image_into_numpy_array(cameraframe)
 
             #prepare images for processing
-            i1 = load_image_into_numpy_array(USERS[userid]['emptybinframe'])
-            i2 = load_image_into_numpy_array(USERS[userid]['curframe'])
+            i1 = USERS[userid]['emptybinframe']
+            i2 = cameraframe#load_image_into_numpy_array(USERS[userid]['curframe'])
 
             lastdelta = USERS[userid]['lastdelta']
             threshpct = USERS[userid]['threshpct']
+            floorthresh = USERS[userid]['floorthresh']
             transiencetime = USERS[userid]['transiencetime']
             lastempty = USERS[userid]['lastempty']         
 
@@ -100,7 +107,7 @@ def data():
                 timesup = False
             
             #check whether bin is full (output image will be automatically labelled, see cvlib)
-            timg, newimg, lastdelta = cvlib.compare_images(i1,i2,threshpct,timesup)
+            timg, newimg, lastdelta = cvlib.compare_images(i1,i2,threshpct,timesup,floorthresh)
             if lastdelta < threshpct:
                 #bin is not full yet, but may have been full in a previous frame
                 #due to a transient object -- reset the counter so we know
@@ -119,8 +126,11 @@ def data():
 
             #add data type so the browser can simply render the base64 data as an image on a canvas
             imdata="data:image/jpeg;base64,"+data.decode('ascii')
+            t2=time.time()-t1
+            print('TIME:',t2)
             return imdata
-    except Exception as e:
+
+    else:#except Exception as e:
         print('error',e)
         return 'error occurred'
     return 'no webcam image provided'
