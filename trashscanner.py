@@ -1,5 +1,5 @@
 from gevent import monkey
-#monkey.patch_all()
+monkey.patch_all()
 from gevent.pywsgi import WSGIServer
 from flask import g,Flask, request, render_template, session, redirect, send_from_directory
 from PIL import Image, ImageOps
